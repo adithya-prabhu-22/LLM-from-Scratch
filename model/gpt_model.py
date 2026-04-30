@@ -7,54 +7,48 @@ from model.transformer_block import TransformerBlock
 
 
 class GPTModel(nn.Module):
-    def __init__(
-        self,
-        vocab_size: int,
-        max_len: int,
-        d_model: int = 768,
-        num_heads: int = 12,
-        num_layers: int = 12,
-        dropout: float = 0.0,
-        bias: bool = False,
-    ):
+
+    def __init__(self, config):
         super().__init__()
 
-        self.vocab_size = vocab_size
-        self.max_len = max_len
-        self.d_model = d_model
-        self.num_heads = num_heads
-        self.num_layers = num_layers
+        self.config = config
+        self.vocab_size = config.vocab_size
+        self.max_len = config.context_length
+        self.d_model = config.d_model
+        self.num_heads = config.num_heads
+        self.num_layers = config.num_layers
 
         self.embeddings = GPTEmbeddings(
-            vocab_size=vocab_size,
-            d_model=d_model,
-            max_len=max_len,
+            vocab_size=config.vocab_size,
+            d_model=config.d_model,
+            max_len=config.context_length,
         )
 
         self.blocks = nn.ModuleList(
             [
                 TransformerBlock(
-                    d_model=d_model,
-                    num_heads=num_heads,
-                    dropout=dropout,
-                    bias=bias,
+                    d_model=config.d_model,
+                    num_heads=config.num_heads,
+                    dropout=config.dropout,
+                    bias=config.qkv_bias,
                 )
-                for _ in range(num_layers)
+                for _ in range(config.num_layers)
             ]
         )
 
         self.final_norm = LayerNorm(
-            d_model=d_model,
-            bias=bias,
+            d_model=config.d_model,
+            bias=config.qkv_bias,
         )
 
         self.lm_head = nn.Linear(
-            d_model,
-            vocab_size,
+            config.d_model,
+            config.vocab_size,
             bias=False,
         )
 
     def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+
         B, T = input_ids.shape
 
         if T > self.max_len:
