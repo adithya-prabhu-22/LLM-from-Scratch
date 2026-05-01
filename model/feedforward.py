@@ -1,9 +1,11 @@
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+
+from model.activations import swiglu
 
 
 class FeedForward(nn.Module):
+
     def __init__(
         self,
         d_model: int,
@@ -22,7 +24,13 @@ class FeedForward(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = F.silu(self.gate_proj(x)) * self.up_proj(x)
+
+        x = swiglu(
+            self.gate_proj(x),
+            self.up_proj(x),
+        )
+
         x = self.down_proj(x)
         x = self.dropout(x)
+
         return x
