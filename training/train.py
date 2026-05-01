@@ -5,6 +5,7 @@ from torch.optim import AdamW
 from config.config import GPTConfig
 from model.gpt_model import GPTModel
 from training.loss import GPTLoss
+from training.evaluate import evaluate
 from data.dataloader import create_dataloader
 from utils.checkpoint import save_checkpoint
 from utils.logger import setup_logger
@@ -12,7 +13,8 @@ from utils.logger import setup_logger
 
 def train(
     model,
-    dataloader,
+    train_dataloader,
+    val_dataloader,
     optimizer,
     criterion,
     device,
@@ -30,7 +32,7 @@ def train(
 
         total_loss = 0.0
 
-        for batch_idx, (input_ids, targets) in enumerate(dataloader):
+        for batch_idx, (input_ids, targets) in enumerate(train_dataloader):
 
             input_ids = input_ids.to(device)
             targets = targets.to(device)
@@ -48,15 +50,24 @@ def train(
             if batch_idx % 100 == 0:
                 logger.info(
                     f"Epoch [{epoch + 1}/{num_epochs}] "
-                    f"Batch [{batch_idx}/{len(dataloader)}] "
-                    f"Loss: {loss.item():.4f}"
+                    f"Batch [{batch_idx}/{len(train_dataloader)}] "
+                    f"Train Loss: {loss.item():.4f}"
                 )
 
-        avg_loss = total_loss / len(dataloader)
+        train_loss = total_loss / len(train_dataloader)
+
+        val_loss, perplexity = evaluate(
+            model=model,
+            dataloader=val_dataloader,
+            criterion=criterion,
+            device=device,
+        )
 
         logger.info(
             f"Epoch [{epoch + 1}/{num_epochs}] "
-            f"Average Loss: {avg_loss:.4f}"
+            f"Train Loss: {train_loss:.4f} "
+            f"Val Loss: {val_loss:.4f} "
+            f"Perplexity: {perplexity:.4f}"
         )
 
         if (epoch + 1) % save_every == 0:
@@ -64,7 +75,7 @@ def train(
                 model=model,
                 optimizer=optimizer,
                 epoch=epoch + 1,
-                loss=avg_loss,
+                loss=val_loss,
                 path=checkpoint_path,
             )
 
@@ -96,11 +107,23 @@ def main():
 
     tokens = tokenizer.encode(text)
 
-    dataloader = create_dataloader(
-        tokens=tokens,
+    split_idx = int(0.9 * len(tokens))
+
+    train_tokens = tokens[:split_idx]
+    val_tokens = tokens[split_idx:]
+
+    train_dataloader = create_dataloader(
+        tokens=train_tokens,
         context_length=config.context_length,
         batch_size=32,
         shuffle=True,
+    )
+
+    val_dataloader = create_dataloader(
+        tokens=val_tokens,
+        context_length=config.context_length,
+        batch_size=32,
+        shuffle=False,
     )
 
     model = GPTModel(config)
@@ -115,7 +138,8 @@ def main():
 
     train(
         model=model,
-        dataloader=dataloader,
+        train_dataloader=train_dataloader,
+        val_dataloader=val_dataloader,
         optimizer=optimizer,
         criterion=criterion,
         device=device,
