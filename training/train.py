@@ -2,8 +2,7 @@ import torch
 import tiktoken
 
 from torch.optim import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.cuda.amp import autocast, GradScaler
+from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
 
 from config.config import GPTConfig
 from model.gpt_model import GPTModel
@@ -27,84 +26,54 @@ def train(
     checkpoint_path: str = "checkpoints/latest.pt",
     save_every: int = 1,
 ):
-
     logger = setup_logger()
-
     model.to(device)
     model.train()
 
-    scaler = GradScaler(
-        enabled=config.use_amp and device.type == "cuda"
+    scaler = torch.amp.GradScaler(
+        "cuda", enabled=config.use_amp and device.type == "cuda"
     )
 
+    global_step = 0
+
     for epoch in range(num_epochs):
-
         total_loss = 0.0
-
         optimizer.zero_grad()
 
         for batch_idx, (input_ids, targets) in enumerate(train_dataloader):
-
             input_ids = input_ids.to(device)
             targets = targets.to(device)
 
-            with autocast(
-                enabled=config.use_amp and device.type == "cuda"
+            with torch.amp.autocast(
+                "cuda", enabled=config.use_amp and device.type == "cuda"
             ):
                 logits = model(input_ids)
-
-                loss = criterion(
-                    logits,
-                    targets,
-                )
-
-                loss = (
-                    loss
-                    / config.gradient_accumulation_steps
-                )
+                loss = criterion(logits, targets)
+                loss = loss / config.gradient_accumulation_steps
 
             scaler.scale(loss).backward()
 
-            if (
-                (batch_idx + 1)
-                % config.gradient_accumulation_steps
-                == 0
-            ):
-
+            if (batch_idx + 1) % config.gradient_accumulation_steps == 0:
                 scaler.unscale_(optimizer)
-
-                torch.nn.utils.clip_grad_norm_(
-                    model.parameters(),
-                    config.grad_clip,
-                )
-
+                torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
                 scaler.step(optimizer)
-
                 scaler.update()
-
                 optimizer.zero_grad()
+                scheduler.step()
+                global_step += 1
 
-            total_loss += (
-                loss.item()
-                * config.gradient_accumulation_steps
-            )
+            total_loss += loss.item() * config.gradient_accumulation_steps
 
             if batch_idx % 100 == 0:
-
                 current_lr = optimizer.param_groups[0]["lr"]
-
                 logger.info(
-                    f"Epoch [{epoch + 1}/{num_epochs}] "
+                    f"Epoch [{epoch+1}/{num_epochs}] "
                     f"Batch [{batch_idx}/{len(train_dataloader)}] "
-                    f"Train Loss: "
-                    f"{loss.item() * config.gradient_accumulation_steps:.4f} "
+                    f"Train Loss: {loss.item() * config.gradient_accumulation_steps:.4f} "
                     f"LR: {current_lr:.8f}"
                 )
 
-        scheduler.step()
-
         train_loss = total_loss / len(train_dataloader)
-
         val_loss, perplexity = evaluate(
             model=model,
             dataloader=val_dataloader,
@@ -113,9 +82,8 @@ def train(
         )
 
         current_lr = optimizer.param_groups[0]["lr"]
-
         logger.info(
-            f"Epoch [{epoch + 1}/{num_epochs}] "
+            f"Epoch [{epoch+1}/{num_epochs}] "
             f"Train Loss: {train_loss:.4f} "
             f"Val Loss: {val_loss:.4f} "
             f"Perplexity: {perplexity:.4f} "
@@ -133,7 +101,6 @@ def train(
 
 
 def main():
-
     config = GPTConfig(
         vocab_size=50257,
         context_length=128,
@@ -149,23 +116,15 @@ def main():
         gradient_accumulation_steps=4,
     )
 
-    device = torch.device(
-        "cuda" if torch.cuda.is_available() else "cpu"
-    )
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with open(
-        "resources/data.txt",
-        "r",
-        encoding="utf-8",
-    ) as f:
+    with open("resources/data.txt", "r", encoding="utf-8") as f:
         text = f.read()
 
     tokenizer = tiktoken.get_encoding("gpt2")
-
     tokens = tokenizer.encode(text)
 
     split_idx = int(0.9 * len(tokens))
-
     train_tokens = tokens[:split_idx]
     val_tokens = tokens[split_idx:]
 
@@ -184,7 +143,6 @@ def main():
     )
 
     model = GPTModel(config)
-
     criterion = GPTLoss()
 
     optimizer = AdamW(
@@ -194,11 +152,26 @@ def main():
     )
 
     num_epochs = 5
+    total_steps = (num_epochs * len(train_dataloader)) // config.gradient_accumulation_steps
+    warmup_steps = 400
 
-    scheduler = CosineAnnealingLR(
+    warmup_scheduler = LinearLR(
         optimizer,
-        T_max=num_epochs,
+        start_factor=1e-8,
+        end_factor=1.0,
+        total_iters=warmup_steps,
+    )
+
+    cosine_scheduler = CosineAnnealingLR(
+        optimizer,
+        T_max=total_steps - warmup_steps,
         eta_min=config.min_learning_rate,
+    )
+
+    scheduler = SequentialLR(
+        optimizer,
+        schedulers=[warmup_scheduler, cosine_scheduler],
+        milestones=[warmup_steps],
     )
 
     train(
