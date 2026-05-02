@@ -153,7 +153,7 @@ def main():
 
     num_epochs = 5
     total_steps = (num_epochs * len(train_dataloader)) // config.gradient_accumulation_steps
-    warmup_steps = 400
+    warmup_steps = 120
 
     warmup_scheduler = LinearLR(
         optimizer,
