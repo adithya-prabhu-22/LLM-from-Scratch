@@ -18,3 +18,6 @@ class GPTConfig:
     top_k: int | None = 40
 
     grad_clip: float = 1.0
+
+    learning_rate: float = 3e-4
+    min_learning_rate: float = 1e-5

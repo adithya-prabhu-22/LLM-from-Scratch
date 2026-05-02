@@ -1,6 +1,8 @@
 import torch
 import tiktoken
+
 from torch.optim import AdamW
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from config.config import GPTConfig
 from model.gpt_model import GPTModel
@@ -17,6 +19,7 @@ def train(
     train_dataloader,
     val_dataloader,
     optimizer,
+    scheduler,
     criterion,
     device,
     num_epochs: int,
@@ -56,11 +59,17 @@ def train(
             total_loss += loss.item()
 
             if batch_idx % 100 == 0:
+
+                current_lr = optimizer.param_groups[0]["lr"]
+
                 logger.info(
                     f"Epoch [{epoch + 1}/{num_epochs}] "
                     f"Batch [{batch_idx}/{len(train_dataloader)}] "
-                    f"Train Loss: {loss.item():.4f}"
+                    f"Train Loss: {loss.item():.4f} "
+                    f"LR: {current_lr:.8f}"
                 )
+
+        scheduler.step()
 
         train_loss = total_loss / len(train_dataloader)
 
@@ -71,11 +80,14 @@ def train(
             device=device,
         )
 
+        current_lr = optimizer.param_groups[0]["lr"]
+
         logger.info(
             f"Epoch [{epoch + 1}/{num_epochs}] "
             f"Train Loss: {train_loss:.4f} "
             f"Val Loss: {val_loss:.4f} "
-            f"Perplexity: {perplexity:.4f}"
+            f"Perplexity: {perplexity:.4f} "
+            f"LR: {current_lr:.8f}"
         )
 
         if (epoch + 1) % save_every == 0:
@@ -99,6 +111,8 @@ def main():
         dropout=0.1,
         qkv_bias=False,
         grad_clip=1.0,
+        learning_rate=3e-4,
+        min_learning_rate=1e-5,
     )
 
     device = torch.device(
@@ -141,8 +155,14 @@ def main():
 
     optimizer = AdamW(
         model.parameters(),
-        lr=3e-4,
+        lr=config.learning_rate,
         weight_decay=0.1,
+    )
+
+    scheduler = CosineAnnealingLR(
+        optimizer,
+        T_max=3,
+        eta_min=config.min_learning_rate,
     )
 
     train(
@@ -151,6 +171,7 @@ def main():
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,
         optimizer=optimizer,
+        scheduler=scheduler,
         criterion=criterion,
         device=device,
         num_epochs=3,
