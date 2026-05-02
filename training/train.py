@@ -12,6 +12,7 @@ from utils.logger import setup_logger
 
 
 def train(
+    config,
     model,
     train_dataloader,
     val_dataloader,
@@ -42,7 +43,14 @@ def train(
             loss = criterion(logits, targets)
 
             optimizer.zero_grad()
+
             loss.backward()
+
+            torch.nn.utils.clip_grad_norm_(
+                model.parameters(),
+                config.grad_clip,
+            )
+
             optimizer.step()
 
             total_loss += loss.item()
@@ -90,6 +98,7 @@ def main():
         num_layers=2,
         dropout=0.1,
         qkv_bias=False,
+        grad_clip=1.0,
     )
 
     device = torch.device(
@@ -137,6 +146,7 @@ def main():
     )
 
     train(
+        config=config,
         model=model,
         train_dataloader=train_dataloader,
         val_dataloader=val_dataloader,

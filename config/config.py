@@ -16,3 +16,5 @@ class GPTConfig:
     max_new_tokens: int = 50
     temperature: float = 0.8
     top_k: int | None = 40
+
+    grad_clip: float = 1.0
