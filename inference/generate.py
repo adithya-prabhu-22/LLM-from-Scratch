@@ -76,6 +76,10 @@ def generate(
             dim=1,
         )
 
+        if input_ids.shape[1] >= context_length:
+            past_kv = None
+            input_ids = input_ids[:, -context_length:]
+
     return input_ids
 
 
@@ -83,13 +87,13 @@ def main():
 
     config = GPTConfig(
         vocab_size=50257,
-        context_length=32,
-        d_model=128,
+        context_length=128,
+        d_model=256,
         num_heads=4,
-        num_layers=2,
+        num_layers=4,
         dropout=0.1,
         qkv_bias=False,
-        max_new_tokens=10,
+        max_new_tokens=100,
         temperature=0.8,
         top_k=40,
     )

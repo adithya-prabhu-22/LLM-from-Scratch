@@ -1,4 +1,3 @@
-
 import torch
 import tiktoken
 
@@ -137,10 +136,10 @@ def main():
 
     config = GPTConfig(
         vocab_size=50257,
-        context_length=32,
-        d_model=128,
+        context_length=128,
+        d_model=256,
         num_heads=4,
-        num_layers=2,
+        num_layers=4,
         dropout=0.1,
         qkv_bias=False,
         grad_clip=1.0,
@@ -165,7 +164,7 @@ def main():
 
     tokens = tokenizer.encode(text)
 
-    split_idx = int(0.8 * len(tokens))
+    split_idx = int(0.9 * len(tokens))
 
     train_tokens = tokens[:split_idx]
     val_tokens = tokens[split_idx:]
@@ -173,14 +172,14 @@ def main():
     train_dataloader = create_dataloader(
         tokens=train_tokens,
         context_length=config.context_length,
-        batch_size=4,
+        batch_size=16,
         shuffle=True,
     )
 
     val_dataloader = create_dataloader(
         tokens=val_tokens,
         context_length=config.context_length,
-        batch_size=4,
+        batch_size=16,
         shuffle=False,
     )
 
@@ -194,7 +193,7 @@ def main():
         weight_decay=0.1,
     )
 
-    num_epochs = 3
+    num_epochs = 5
 
     scheduler = CosineAnnealingLR(
         optimizer,
@@ -217,4 +216,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

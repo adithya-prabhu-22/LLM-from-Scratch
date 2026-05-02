@@ -45,7 +45,10 @@ class MultiHeadAttention(nn.Module):
 
         qkv = self.qkv_proj(x)
 
-        queries, keys, values = qkv.chunk(3, dim=-1)
+        queries, keys, values = qkv.chunk(
+            3,
+            dim=-1,
+        )
 
         queries = queries.view(
             B,
@@ -68,8 +71,12 @@ class MultiHeadAttention(nn.Module):
             self.head_dim,
         ).transpose(1, 2)
 
+        past_length = 0
+
         if past_kv is not None:
             past_keys, past_values = past_kv
+
+            past_length = past_keys.size(2)
 
             keys = torch.cat(
                 [past_keys, keys],
@@ -90,20 +97,25 @@ class MultiHeadAttention(nn.Module):
 
         scores = scores / math.sqrt(self.head_dim)
 
-        if past_kv is None:
-            causal_mask = torch.tril(
-                torch.ones(
-                    T,
-                    T,
-                    device=x.device,
-                    dtype=torch.bool,
-                )
-            )
+        total_length = past_length + T
 
-            scores = scores.masked_fill(
-                ~causal_mask,
-                float("-inf"),
-            )
+        query_positions = torch.arange(
+            past_length,
+            total_length,
+            device=x.device,
+        ).unsqueeze(-1)
+
+        key_positions = torch.arange(
+            total_length,
+            device=x.device,
+        ).unsqueeze(0)
+
+        causal_mask = key_positions <= query_positions
+
+        scores = scores.masked_fill(
+            ~causal_mask.view(1, 1, T, total_length),
+            float("-inf"),
+        )
 
         attention_weights = torch.softmax(
             scores,

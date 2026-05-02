@@ -5,10 +5,17 @@ def create_input_target_pairs(
     tokens,
     context_length: int,
 ):
+
     tokens = torch.tensor(
         tokens,
         dtype=torch.long,
     )
+
+    if len(tokens) <= context_length:
+        raise ValueError(
+            f"Token sequence length {len(tokens)} must be greater than "
+            f"context_length {context_length}"
+        )
 
     input_ids = []
     targets = []
