@@ -16,12 +16,21 @@ def generate(
 
     model.eval()
 
+    past_kv = None
+
     for _ in range(max_new_tokens):
 
-        input_ids_cond = input_ids[:, -context_length:]
+        if past_kv is None:
+            input_ids_cond = input_ids[:, -context_length:]
+        else:
+            input_ids_cond = input_ids[:, -1:]
 
         with torch.no_grad():
-            logits = model(input_ids_cond)
+            logits, past_kv = model(
+                input_ids_cond,
+                past_kv=past_kv,
+                use_cache=True,
+            )
 
         logits = logits[:, -1, :]
 

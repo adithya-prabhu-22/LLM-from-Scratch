@@ -3,20 +3,50 @@ import torch.nn as nn
 
 
 class GPTEmbeddings(nn.Module):
-    def __init__(self, vocab_size, d_model, max_len):
+
+    def __init__(
+        self,
+        vocab_size: int,
+        d_model: int,
+        max_len: int,
+        dropout: float = 0.0,
+    ):
         super().__init__()
 
-        self.token_embed = nn.Embedding(vocab_size, d_model)
-        self.pos_embed = nn.Embedding(max_len, d_model)
+        self.token_embedding = nn.Embedding(
+            vocab_size,
+            d_model,
+        )
 
-    def forward(self, input_ids):
+        self.position_embedding = nn.Embedding(
+            max_len,
+            d_model,
+        )
+
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        start_pos: int = 0,
+    ) -> torch.Tensor:
+
         B, T = input_ids.shape
 
-        tok_emb = self.token_embed(input_ids)
+        positions = torch.arange(
+            start_pos,
+            start_pos + T,
+            device=input_ids.device,
+        )
 
-        pos_ids = torch.arange(T, device=input_ids.device).unsqueeze(0)
-        pos_ids = pos_ids.expand(B, T)
+        token_embeddings = self.token_embedding(input_ids)
 
-        pos_emb = self.pos_embed(pos_ids)
+        position_embeddings = self.position_embedding(
+            positions
+        )
 
-        return tok_emb + pos_emb
+        x = token_embeddings + position_embeddings
+
+        x = self.dropout(x)
+
+        return x

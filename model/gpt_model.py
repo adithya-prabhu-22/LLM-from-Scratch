@@ -22,6 +22,7 @@ class GPTModel(nn.Module):
             vocab_size=config.vocab_size,
             d_model=config.d_model,
             max_len=config.context_length,
+            dropout=config.dropout,
         )
 
         self.blocks = nn.ModuleList(
@@ -47,22 +48,58 @@ class GPTModel(nn.Module):
             bias=False,
         )
 
-    def forward(self, input_ids: torch.Tensor) -> torch.Tensor:
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        past_kv=None,
+        use_cache: bool = False,
+    ):
 
         B, T = input_ids.shape
 
-        if T > self.max_len:
+        if past_kv is None:
+            past_length = 0
+        else:
+            past_length = past_kv[0][0].shape[2]
+
+        total_length = past_length + T
+
+        if total_length > self.max_len:
             raise ValueError(
-                f"Sequence length {T} exceeds max_len {self.max_len}"
+                f"Sequence length {total_length} exceeds max_len {self.max_len}"
             )
 
-        x = self.embeddings(input_ids)
+        x = self.embeddings(
+            input_ids,
+            start_pos=past_length,
+        )
 
-        for block in self.blocks:
-            x = block(x)
+        present_kv = []
+
+        for idx, block in enumerate(self.blocks):
+
+            layer_past = None
+
+            if past_kv is not None:
+                layer_past = past_kv[idx]
+
+            if use_cache:
+                x, layer_present = block(
+                    x,
+                    past_kv=layer_past,
+                    use_cache=True,
+                )
+
+                present_kv.append(layer_present)
+
+            else:
+                x = block(x)
 
         x = self.final_norm(x)
 
         logits = self.lm_head(x)
+
+        if use_cache:
+            return logits, present_kv
 
         return logits
