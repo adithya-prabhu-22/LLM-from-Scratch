@@ -10,6 +10,8 @@ def generate(
     input_ids,
     max_new_tokens: int,
     context_length: int,
+    temperature: float = 1.0,
+    top_k: int | None = None,
 ):
 
     model.eval()
@@ -23,13 +25,42 @@ def generate(
 
         logits = logits[:, -1, :]
 
-        probs = torch.softmax(logits, dim=-1)
+        if temperature <= 0:
+            next_token = torch.argmax(
+                logits,
+                dim=-1,
+                keepdim=True,
+            )
+        else:
+            logits = logits / temperature
 
-        next_token = torch.argmax(
-            probs,
-            dim=-1,
-            keepdim=True,
-        )
+            if top_k is not None:
+                top_values, _ = torch.topk(
+                    logits,
+                    k=top_k,
+                    dim=-1,
+                )
+
+                min_top_value = top_values[:, -1].unsqueeze(-1)
+
+                logits = torch.where(
+                    logits < min_top_value,
+                    torch.tensor(
+                        float("-inf"),
+                        device=logits.device,
+                    ),
+                    logits,
+                )
+
+            probs = torch.softmax(
+                logits,
+                dim=-1,
+            )
+
+            next_token = torch.multinomial(
+                probs,
+                num_samples=1,
+            )
 
         input_ids = torch.cat(
             [input_ids, next_token],
@@ -49,6 +80,9 @@ def main():
         num_layers=2,
         dropout=0.1,
         qkv_bias=False,
+        max_new_tokens=50,
+        temperature=0.8,
+        top_k=40,
     )
 
     device = torch.device(
@@ -80,8 +114,10 @@ def main():
     output_ids = generate(
         model=model,
         input_ids=input_ids,
-        max_new_tokens=50,
+        max_new_tokens=config.max_new_tokens,
         context_length=config.context_length,
+        temperature=config.temperature,
+        top_k=config.top_k,
     )
 
     output_text = tokenizer.decode(

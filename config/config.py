@@ -12,3 +12,7 @@ class GPTConfig:
     dropout: float = 0.1
     qkv_bias: bool = False
     ffn_hidden_dim: int = 4 * 768
+
+    max_new_tokens: int = 50
+    temperature: float = 0.8
+    top_k: int | None = 40
