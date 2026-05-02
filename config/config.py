@@ -21,3 +21,5 @@ class GPTConfig:
 
     learning_rate: float = 3e-4
     min_learning_rate: float = 1e-5
+
+    use_amp: bool = True

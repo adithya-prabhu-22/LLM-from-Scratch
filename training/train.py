@@ -3,6 +3,7 @@ import tiktoken
 
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.cuda.amp import autocast, GradScaler
 
 from config.config import GPTConfig
 from model.gpt_model import GPTModel
@@ -32,6 +33,10 @@ def train(
     model.to(device)
     model.train()
 
+    scaler = GradScaler(
+        enabled=config.use_amp and device.type == "cuda"
+    )
+
     for epoch in range(num_epochs):
 
         total_loss = 0.0
@@ -41,20 +46,30 @@ def train(
             input_ids = input_ids.to(device)
             targets = targets.to(device)
 
-            logits = model(input_ids)
-
-            loss = criterion(logits, targets)
-
             optimizer.zero_grad()
 
-            loss.backward()
+            with autocast(
+                enabled=config.use_amp and device.type == "cuda"
+            ):
+                logits = model(input_ids)
+
+                loss = criterion(
+                    logits,
+                    targets,
+                )
+
+            scaler.scale(loss).backward()
+
+            scaler.unscale_(optimizer)
 
             torch.nn.utils.clip_grad_norm_(
                 model.parameters(),
                 config.grad_clip,
             )
 
-            optimizer.step()
+            scaler.step(optimizer)
+
+            scaler.update()
 
             total_loss += loss.item()
 
@@ -113,6 +128,7 @@ def main():
         grad_clip=1.0,
         learning_rate=3e-4,
         min_learning_rate=1e-5,
+        use_amp=True,
     )
 
     device = torch.device(
@@ -159,9 +175,11 @@ def main():
         weight_decay=0.1,
     )
 
+    num_epochs = 3
+
     scheduler = CosineAnnealingLR(
         optimizer,
-        T_max=3,
+        T_max=num_epochs,
         eta_min=config.min_learning_rate,
     )
 
@@ -174,7 +192,7 @@ def main():
         scheduler=scheduler,
         criterion=criterion,
         device=device,
-        num_epochs=3,
+        num_epochs=num_epochs,
     )
 
 
