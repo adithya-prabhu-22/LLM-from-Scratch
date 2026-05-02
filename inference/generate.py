@@ -83,13 +83,13 @@ def main():
 
     config = GPTConfig(
         vocab_size=50257,
-        context_length=128,
+        context_length=32,
         d_model=128,
         num_heads=4,
         num_layers=2,
         dropout=0.1,
         qkv_bias=False,
-        max_new_tokens=50,
+        max_new_tokens=10,
         temperature=0.8,
         top_k=40,
     )

@@ -1,3 +1,4 @@
+import os
 import torch
 
 
@@ -15,6 +16,14 @@ def save_checkpoint(
         "optimizer_state_dict": optimizer.state_dict(),
         "loss": loss,
     }
+
+    checkpoint_dir = os.path.dirname(path)
+
+    if checkpoint_dir:
+        os.makedirs(
+            checkpoint_dir,
+            exist_ok=True,
+        )
 
     torch.save(checkpoint, path)
 
