@@ -23,3 +23,5 @@ class GPTConfig:
     min_learning_rate: float = 1e-5
 
     use_amp: bool = True
+
+    gradient_accumulation_steps: int = 4

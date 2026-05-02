@@ -1,3 +1,4 @@
+
 import torch
 import tiktoken
 
@@ -41,12 +42,12 @@ def train(
 
         total_loss = 0.0
 
+        optimizer.zero_grad()
+
         for batch_idx, (input_ids, targets) in enumerate(train_dataloader):
 
             input_ids = input_ids.to(device)
             targets = targets.to(device)
-
-            optimizer.zero_grad()
 
             with autocast(
                 enabled=config.use_amp and device.type == "cuda"
@@ -58,20 +59,36 @@ def train(
                     targets,
                 )
 
+                loss = (
+                    loss
+                    / config.gradient_accumulation_steps
+                )
+
             scaler.scale(loss).backward()
 
-            scaler.unscale_(optimizer)
+            if (
+                (batch_idx + 1)
+                % config.gradient_accumulation_steps
+                == 0
+            ):
 
-            torch.nn.utils.clip_grad_norm_(
-                model.parameters(),
-                config.grad_clip,
+                scaler.unscale_(optimizer)
+
+                torch.nn.utils.clip_grad_norm_(
+                    model.parameters(),
+                    config.grad_clip,
+                )
+
+                scaler.step(optimizer)
+
+                scaler.update()
+
+                optimizer.zero_grad()
+
+            total_loss += (
+                loss.item()
+                * config.gradient_accumulation_steps
             )
-
-            scaler.step(optimizer)
-
-            scaler.update()
-
-            total_loss += loss.item()
 
             if batch_idx % 100 == 0:
 
@@ -80,7 +97,8 @@ def train(
                 logger.info(
                     f"Epoch [{epoch + 1}/{num_epochs}] "
                     f"Batch [{batch_idx}/{len(train_dataloader)}] "
-                    f"Train Loss: {loss.item():.4f} "
+                    f"Train Loss: "
+                    f"{loss.item() * config.gradient_accumulation_steps:.4f} "
                     f"LR: {current_lr:.8f}"
                 )
 
@@ -129,6 +147,7 @@ def main():
         learning_rate=3e-4,
         min_learning_rate=1e-5,
         use_amp=True,
+        gradient_accumulation_steps=4,
     )
 
     device = torch.device(
@@ -198,3 +217,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
