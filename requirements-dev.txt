@@ -1,0 +1,8 @@
+-r requirements.txt
+
+matplotlib
+networkx
+sympy
+jupyter
+pytest
+tensorboard
