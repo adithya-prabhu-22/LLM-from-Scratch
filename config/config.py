@@ -1,21 +1,22 @@
 from dataclasses import dataclass
 
+
 @dataclass
 class GPTConfig:
 
-    vocab_size: int = 32000
-    context_length: int = 1024
+    vocab_size: int = 50257
+    context_length: int = 128
 
-    d_model: int = 768
-    num_heads: int = 12
-    num_layers: int = 12
+    d_model: int = 256
+    num_heads: int = 4
+    num_layers: int = 4
 
     dropout: float = 0.1
     qkv_bias: bool = False
 
     ffn_hidden_dim: int | None = None
 
-    max_new_tokens: int = 50
+    max_new_tokens: int = 100
     temperature: float = 0.8
     top_k: int | None = 40
 
@@ -27,4 +28,3 @@ class GPTConfig:
     use_amp: bool = True
 
     gradient_accumulation_steps: int = 4
-
