@@ -59,6 +59,7 @@ structure = {
 
     "scripts": [
         "train_run.sh",
+        "prepare_medical_5m.py",
     ],
 
     "checkpoints": [],
