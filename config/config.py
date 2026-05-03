@@ -5,11 +5,12 @@ from dataclasses import dataclass
 class GPTConfig:
 
     vocab_size: int = 50257
-    context_length: int = 128
+    context_length: int = 256
+    stride: int = 64
 
-    d_model: int = 256
-    num_heads: int = 4
-    num_layers: int = 4
+    d_model: int = 512
+    num_heads: int = 8
+    num_layers: int = 6
 
     dropout: float = 0.1
     qkv_bias: bool = False
@@ -27,4 +28,4 @@ class GPTConfig:
 
     use_amp: bool = True
 
-    gradient_accumulation_steps: int = 4
+    gradient_accumulation_steps: int = 8

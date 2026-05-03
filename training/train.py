@@ -56,9 +56,11 @@ def train(
             if (batch_idx + 1) % config.gradient_accumulation_steps == 0:
                 scaler.unscale_(optimizer)
                 torch.nn.utils.clip_grad_norm_(model.parameters(), config.grad_clip)
+
                 scaler.step(optimizer)
                 scaler.update()
                 optimizer.zero_grad()
+
                 scheduler.step()
                 global_step += 1
 
@@ -74,6 +76,7 @@ def train(
                 )
 
         train_loss = total_loss / len(train_dataloader)
+
         val_loss, perplexity = evaluate(
             model=model,
             dataloader=val_dataloader,
@@ -82,6 +85,7 @@ def train(
         )
 
         current_lr = optimizer.param_groups[0]["lr"]
+
         logger.info(
             f"Epoch [{epoch+1}/{num_epochs}] "
             f"Train Loss: {train_loss:.4f} "
@@ -103,17 +107,18 @@ def train(
 def main():
     config = GPTConfig(
         vocab_size=50257,
-        context_length=128,
-        d_model=256,
-        num_heads=4,
-        num_layers=4,
+        context_length=256,
+        stride=64,
+        d_model=512,
+        num_heads=8,
+        num_layers=6,
         dropout=0.1,
         qkv_bias=False,
         grad_clip=1.0,
         learning_rate=3e-4,
         min_learning_rate=1e-5,
         use_amp=True,
-        gradient_accumulation_steps=4,
+        gradient_accumulation_steps=8,
     )
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -131,15 +136,17 @@ def main():
     train_dataloader = create_dataloader(
         tokens=train_tokens,
         context_length=config.context_length,
-        batch_size=16,
+        batch_size=8,
         shuffle=True,
+        stride=config.stride,
     )
 
     val_dataloader = create_dataloader(
         tokens=val_tokens,
         context_length=config.context_length,
-        batch_size=16,
+        batch_size=8,
         shuffle=False,
+        stride=config.stride,
     )
 
     model = GPTModel(config)
@@ -152,7 +159,11 @@ def main():
     )
 
     num_epochs = 5
-    total_steps = (num_epochs * len(train_dataloader)) // config.gradient_accumulation_steps
+
+    total_steps = (
+        num_epochs * len(train_dataloader)
+    ) // config.gradient_accumulation_steps
+
     warmup_steps = 120
 
     warmup_scheduler = LinearLR(

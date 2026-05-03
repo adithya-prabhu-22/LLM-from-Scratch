@@ -87,10 +87,11 @@ def main():
 
     config = GPTConfig(
         vocab_size=50257,
-        context_length=128,
-        d_model=256,
-        num_heads=4,
-        num_layers=4,
+        context_length=256,
+        stride=64,
+        d_model=512,
+        num_heads=8,
+        num_layers=6,
         dropout=0.1,
         qkv_bias=False,
         max_new_tokens=100,
