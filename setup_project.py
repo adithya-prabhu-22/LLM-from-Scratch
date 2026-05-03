@@ -50,8 +50,14 @@ structure = {
         "test_data.py",
     ],
 
-    "experiments/experiment_01":       [],
+    "experiments/experiment_01": [],
     "experiments/experiment_01/plots": [],
+
+    "experiments/exp_02a_tiktoken_medical_5m": [],
+    "experiments/exp_02a_tiktoken_medical_5m/plots": [],
+
+    "experiments/exp_02b_custom_bpe_medical_5m": [],
+    "experiments/exp_02b_custom_bpe_medical_5m/plots": [],
 
     "notebooks": [],
 
@@ -85,8 +91,16 @@ NON_PACKAGE_DIRS = {
     "notebooks",
     "resources",
     "experiments",
+
     "experiments/experiment_01",
     "experiments/experiment_01/plots",
+
+    "experiments/exp_02a_tiktoken_medical_5m",
+    "experiments/exp_02a_tiktoken_medical_5m/plots",
+
+    "experiments/exp_02b_custom_bpe_medical_5m",
+    "experiments/exp_02b_custom_bpe_medical_5m/plots",
+
     "scripts",
     "checkpoints",
     "logs",
