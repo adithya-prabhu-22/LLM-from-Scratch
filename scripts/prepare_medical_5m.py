@@ -8,13 +8,23 @@ TARGET_TOKENS = 5_000_000
 TOKENIZER_NAME = "gpt2"
 
 
+def get_text(row):
+    if "abstract" in row and row["abstract"]:
+        return row["abstract"]
+
+    if "text" in row and row["text"]:
+        return row["text"]
+
+    return ""
+
+
 def main():
     Path("resources").mkdir(parents=True, exist_ok=True)
 
     tokenizer = tiktoken.get_encoding(TOKENIZER_NAME)
 
     dataset = load_dataset(
-        "ncbi/pubmed",
+        "uiyunkim-hub/pubmed-abstract",
         split="train",
         streaming=True,
     )
@@ -24,28 +34,21 @@ def main():
 
     with open(OUTPUT_PATH, "w", encoding="utf-8") as f:
         for row in dataset:
-            text = row.get("abstract", "")
-
-            if text is None:
-                continue
-
-            text = text.strip()
+            text = get_text(row).strip()
 
             if len(text) < 200:
                 continue
 
+            text = text.replace("\n", " ")
             num_tokens = len(tokenizer.encode(text))
 
-            f.write(text.replace("\n", " ") + "\n\n")
+            f.write(text + "\n\n")
 
             total_tokens += num_tokens
             total_docs += 1
 
             if total_docs % 1000 == 0:
-                print(
-                    f"Docs: {total_docs:,} | "
-                    f"Tokens: {total_tokens:,}"
-                )
+                print(f"Docs: {total_docs:,} | Tokens: {total_tokens:,}")
 
             if total_tokens >= TARGET_TOKENS:
                 break
