@@ -13,13 +13,10 @@ def generate(
     temperature: float = 1.0,
     top_k: int | None = None,
 ):
-
     model.eval()
-
     past_kv = None
 
     for _ in range(max_new_tokens):
-
         if past_kv is None:
             input_ids_cond = input_ids[:, -context_length:]
         else:
@@ -44,6 +41,8 @@ def generate(
             logits = logits / temperature
 
             if top_k is not None:
+                top_k = min(top_k, logits.size(-1))
+
                 top_values, _ = torch.topk(
                     logits,
                     k=top_k,
@@ -54,10 +53,7 @@ def generate(
 
                 logits = torch.where(
                     logits < min_top_value,
-                    torch.tensor(
-                        float("-inf"),
-                        device=logits.device,
-                    ),
+                    torch.full_like(logits, float("-inf")),
                     logits,
                 )
 
@@ -76,39 +72,25 @@ def generate(
             dim=1,
         )
 
-        if input_ids.shape[1] >= context_length:
-            past_kv = None
+        if input_ids.shape[1] > context_length:
             input_ids = input_ids[:, -context_length:]
+            past_kv = None
 
     return input_ids
 
 
 def main():
-
-    config = GPTConfig(
-        vocab_size=50257,
-        context_length=256,
-        stride=64,
-        d_model=512,
-        num_heads=8,
-        num_layers=6,
-        dropout=0.1,
-        qkv_bias=False,
-        max_new_tokens=100,
-        temperature=0.8,
-        top_k=40,
-    )
+    config = GPTConfig()
 
     device = torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
     )
 
     tokenizer = tiktoken.get_encoding("gpt2")
-
     model = GPTModel(config).to(device)
 
     checkpoint = torch.load(
-        "checkpoints/latest.pt",
+        "experiments/exp_02a_tiktoken_medical_5m/checkpoints/best.pt",
         map_location=device,
     )
 
@@ -116,7 +98,7 @@ def main():
         checkpoint["model_state_dict"]
     )
 
-    prompt = "Deep learning"
+    prompt = "The symptoms of diabetes include"
 
     input_ids = tokenizer.encode(prompt)
 

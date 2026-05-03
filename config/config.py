@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 @dataclass
 class GPTConfig:
-
     vocab_size: int = 50257
     context_length: int = 256
     stride: int = 64
@@ -25,7 +24,5 @@ class GPTConfig:
     min_learning_rate: float = 1e-5
 
     grad_clip: float = 1.0
-
     use_amp: bool = True
-
     gradient_accumulation_steps: int = 8
