@@ -19,24 +19,45 @@ from data.dataloader import create_dataloader
 from utils.checkpoint import save_checkpoint
 from utils.logger import setup_logger
 
-TOKENIZER_REPO = Path(
-    r"C:\Users\ADITHYA\Desktop\Domain-Specific-BPE-Tokenizer"
-)
 
-TOKENIZER_DATA_SRC = TOKENIZER_REPO / "data"
-TOKENIZER_DATA_ALIAS = TOKENIZER_REPO / "tokenizer_data"
+def setup_custom_bpe_tokenizer():
+    possible_paths = [
+        Path("/content/Domain-Specific-BPE-Tokenizer"),
+        Path(r"C:\Users\ADITHYA\Desktop\Domain-Specific-BPE-Tokenizer"),
+    ]
 
-if not TOKENIZER_DATA_ALIAS.exists():
-    shutil.copytree(TOKENIZER_DATA_SRC, TOKENIZER_DATA_ALIAS)
+    tokenizer_repo = None
 
-    for py_file in TOKENIZER_DATA_ALIAS.glob("*.py"):
-        text = py_file.read_text(encoding="utf-8")
-        text = text.replace("from data.", "from tokenizer_data.")
-        py_file.write_text(text, encoding="utf-8")
+    for path in possible_paths:
+        if path.exists():
+            tokenizer_repo = path
+            break
 
-sys.path.insert(0, str(TOKENIZER_REPO))
+    if tokenizer_repo is None:
+        raise FileNotFoundError(
+            "Domain-Specific-BPE-Tokenizer repo not found. "
+            "Clone it in Colab or place it on Desktop in Windows."
+        )
 
-from tokenizer_data.bpe_tokenizer import BPETokenizer
+    tokenizer_data_src = tokenizer_repo / "data"
+    tokenizer_data_alias = tokenizer_repo / "tokenizer_data"
+
+    if not tokenizer_data_alias.exists():
+        shutil.copytree(tokenizer_data_src, tokenizer_data_alias)
+
+        for py_file in tokenizer_data_alias.glob("*.py"):
+            text = py_file.read_text(encoding="utf-8")
+            text = text.replace("from data.", "from tokenizer_data.")
+            py_file.write_text(text, encoding="utf-8")
+
+    sys.path.insert(0, str(tokenizer_repo))
+
+    from tokenizer_data.bpe_tokenizer import BPETokenizer
+
+    return BPETokenizer
+
+
+BPETokenizer = setup_custom_bpe_tokenizer()
 
 
 class CSVLogger:
