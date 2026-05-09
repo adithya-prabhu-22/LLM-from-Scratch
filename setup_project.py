@@ -32,6 +32,7 @@ structure = {
     "training": [
         "loss.py",
         "train.py",
+        "train_experiment_02b.py",
         "evaluate.py",
     ],
 
@@ -65,6 +66,7 @@ structure = {
 
     "scripts": [
         "train_run.sh",
+        "train_exp02b.sh",
         "prepare_medical_5m.py",
     ],
 
@@ -203,12 +205,20 @@ python -m training.train
 """
 
 
+TRAIN_EXP02B_SCRIPT_CONTENT = """\
+#!/bin/bash
+
+python -m training.train_experiment_02b
+"""
+
+
 CONTENT_MAP = {
     ".gitignore": GITIGNORE_CONTENT,
     ".env.example": ENV_EXAMPLE_CONTENT,
     "requirements.txt": REQUIREMENTS_CONTENT,
     "requirements-dev.txt": REQUIREMENTS_DEV_CONTENT,
     "train_run.sh": TRAIN_SCRIPT_CONTENT,
+    "train_exp02b.sh": TRAIN_EXP02B_SCRIPT_CONTENT,
 }
 
 
