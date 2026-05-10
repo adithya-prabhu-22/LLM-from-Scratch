@@ -120,6 +120,34 @@ def save_tokenizer_report(tokens, text, tokenizer_name, experiment_dir):
     return report
 
 
+def load_or_encode_tokens(tokenizer, text, cache_path):
+    cache_path = Path(cache_path)
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if cache_path.exists():
+        print(f"Loading cached custom BPE tokens from {cache_path}...")
+        tokens = torch.load(cache_path)
+        print(f"Loaded cached tokens: {len(tokens):,}")
+        return tokens
+
+    print("Encoding full corpus with custom BPE tokenizer...")
+    print("This may take time because the custom tokenizer is pure Python.")
+    start_time = time.time()
+
+    tokens = tokenizer.encode(text)
+
+    elapsed = time.time() - start_time
+
+    print("Encoding complete.")
+    print(f"Total custom BPE tokens: {len(tokens):,}")
+    print(f"Encoding time: {elapsed / 60:.2f} minutes")
+
+    torch.save(tokens, cache_path)
+    print(f"Saved token cache to {cache_path}")
+
+    return tokens
+
+
 def train(
     config,
     model,
@@ -361,7 +389,12 @@ def main():
         text = f.read()
 
     tokenizer = BPETokenizer.load("resources/bpe_medical_52k.json")
-    tokens = tokenizer.encode(text)
+
+    tokens = load_or_encode_tokens(
+        tokenizer=tokenizer,
+        text=text,
+        cache_path="resources/custom_bpe_52k_medical_5m_tokens.pt",
+    )
 
     save_tokenizer_report(
         tokens=tokens,
