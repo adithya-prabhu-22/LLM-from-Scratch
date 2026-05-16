@@ -1,63 +1,21 @@
 import csv
 import json
 import math
-import shutil
-import sys
 import time
 from pathlib import Path
 
 import torch
-
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
+from torch.utils.data import DataLoader, random_split
 
 from config.config import GPTConfig
 from model.gpt_model import GPTModel
 from training.loss import GPTLoss
 from training.evaluate import evaluate
-from data.dataloader import create_dataloader
+from training.chunk_dataset import TokenChunkDataset
 from utils.checkpoint import save_checkpoint
 from utils.logger import setup_logger
-
-
-def setup_custom_bpe_tokenizer():
-    possible_paths = [
-        Path("/content/Domain-Specific-BPE-Tokenizer"),
-        Path(r"C:\Users\ADITHYA\Desktop\Domain-Specific-BPE-Tokenizer"),
-    ]
-
-    tokenizer_repo = None
-
-    for path in possible_paths:
-        if path.exists():
-            tokenizer_repo = path
-            break
-
-    if tokenizer_repo is None:
-        raise FileNotFoundError(
-            "Domain-Specific-BPE-Tokenizer repo not found. "
-            "Clone it in Colab or place it on Desktop in Windows."
-        )
-
-    tokenizer_data_src = tokenizer_repo / "data"
-    tokenizer_data_alias = tokenizer_repo / "tokenizer_data"
-
-    if not tokenizer_data_alias.exists():
-        shutil.copytree(tokenizer_data_src, tokenizer_data_alias)
-
-        for py_file in tokenizer_data_alias.glob("*.py"):
-            text = py_file.read_text(encoding="utf-8")
-            text = text.replace("from data.", "from tokenizer_data.")
-            py_file.write_text(text, encoding="utf-8")
-
-    sys.path.insert(0, str(tokenizer_repo))
-
-    from tokenizer_data.bpe_tokenizer import BPETokenizer
-
-    return BPETokenizer
-
-
-BPETokenizer = setup_custom_bpe_tokenizer()
 
 
 class CSVLogger:
@@ -94,58 +52,6 @@ def save_config(config, experiment_dir):
 
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config.__dict__, f, indent=4)
-
-
-def save_tokenizer_report(tokens, text, tokenizer_name, experiment_dir):
-    total_chars = len(text)
-    total_words = len(text.split())
-    total_tokens = len(tokens)
-
-    report = {
-        "tokenizer": tokenizer_name,
-        "total_chars": total_chars,
-        "total_words": total_words,
-        "total_tokens": total_tokens,
-        "chars_per_token": total_chars / total_tokens,
-        "tokens_per_word": total_tokens / total_words,
-        "words_per_token": total_words / total_tokens,
-    }
-
-    report_path = Path(experiment_dir) / "tokenizer_report.json"
-    report_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(report_path, "w", encoding="utf-8") as f:
-        json.dump(report, f, indent=4)
-
-    return report
-
-
-def load_or_encode_tokens(tokenizer, text, cache_path):
-    cache_path = Path(cache_path)
-    cache_path.parent.mkdir(parents=True, exist_ok=True)
-
-    if cache_path.exists():
-        print(f"Loading cached custom BPE tokens from {cache_path}...")
-        tokens = torch.load(cache_path)
-        print(f"Loaded cached tokens: {len(tokens):,}")
-        return tokens
-
-    print("Encoding full corpus with custom BPE tokenizer...")
-    print("This may take time because the custom tokenizer is pure Python.")
-    start_time = time.time()
-
-    tokens = tokenizer.encode(text)
-
-    elapsed = time.time() - start_time
-
-    print("Encoding complete.")
-    print(f"Total custom BPE tokens: {len(tokens):,}")
-    print(f"Encoding time: {elapsed / 60:.2f} minutes")
-
-    torch.save(tokens, cache_path)
-    print(f"Saved token cache to {cache_path}")
-
-    return tokens
 
 
 def train(
@@ -378,6 +284,8 @@ def main():
     )
 
     experiment_dir = "experiments/exp_02b_custom_bpe_medical_5m"
+    tokenized_dir = "/content/drive/MyDrive/exp_02b_custom_bpe/tokenized_chunks"
+
     num_epochs = 5
     batch_size = 8
 
@@ -385,42 +293,35 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with open("resources/data.txt", "r", encoding="utf-8") as f:
-        text = f.read()
-
-    tokenizer = BPETokenizer.load("resources/bpe_medical_52k.json")
-
-    tokens = load_or_encode_tokens(
-        tokenizer=tokenizer,
-        text=text,
-        cache_path="resources/custom_bpe_52k_medical_5m_tokens.pt",
-    )
-
-    save_tokenizer_report(
-        tokens=tokens,
-        text=text,
-        tokenizer_name="custom_bpe_52k_medical",
-        experiment_dir=experiment_dir,
-    )
-
-    split_idx = int(0.9 * len(tokens))
-    train_tokens = tokens[:split_idx]
-    val_tokens = tokens[split_idx:]
-
-    train_dataloader = create_dataloader(
-        tokens=train_tokens,
+    dataset = TokenChunkDataset(
+        tokenized_dir=tokenized_dir,
         context_length=config.context_length,
+        stride=config.stride,
+    )
+
+    train_size = int(0.9 * len(dataset))
+    val_size = len(dataset) - train_size
+
+    train_dataset, val_dataset = random_split(
+        dataset,
+        [train_size, val_size],
+        generator=torch.Generator().manual_seed(42),
+    )
+
+    train_dataloader = DataLoader(
+        train_dataset,
         batch_size=batch_size,
         shuffle=True,
-        stride=config.stride,
+        num_workers=2,
+        pin_memory=True,
     )
 
-    val_dataloader = create_dataloader(
-        tokens=val_tokens,
-        context_length=config.context_length,
+    val_dataloader = DataLoader(
+        val_dataset,
         batch_size=batch_size,
         shuffle=False,
-        stride=config.stride,
+        num_workers=2,
+        pin_memory=True,
     )
 
     model = GPTModel(config)

@@ -33,6 +33,7 @@ structure = {
         "loss.py",
         "train.py",
         "train_experiment_02b.py",
+        "chunk_dataset.py",
         "evaluate.py",
     ],
 
@@ -68,6 +69,8 @@ structure = {
         "train_run.sh",
         "train_exp02b.sh",
         "prepare_medical_5m.py",
+        "create_text_chunks.py",
+        "tokenize_chunks_custom_bpe.py",
     ],
 
     "checkpoints": [],
@@ -415,3 +418,4 @@ if __name__ == "__main__":
         sys.exit(0)
 
     create_structure()
+
