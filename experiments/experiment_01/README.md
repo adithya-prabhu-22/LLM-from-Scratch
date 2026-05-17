@@ -2,17 +2,17 @@
 
 ## Overview
 
-Experiment 01 is the initial baseline experiment for training a GPT-style decoder-only language model using the GPT-2 TikToken tokenizer on a small WikiText-103 corpus subset.
+Experiment 01 is the initial baseline experiment for training a GPT-style decoder-only language model using the GPT-2 TikToken tokenizer on a subset of the WikiText-103 dataset.
 
-This experiment was used to:
-- Validate the training pipeline
+This experiment was conducted to:
+- Validate the end-to-end training pipeline
 - Test tokenizer integration
-- Verify checkpoint saving
-- Establish initial baseline metrics
+- Verify checkpoint saving and loading
+- Establish baseline training metrics
 
 ---
 
-## Run Experiment 01
+## Running Experiment 01
 
 ### 1. Clone Repository
 
@@ -46,7 +46,7 @@ with open("resources/data.txt", "w", encoding="utf-8") as f:
 
 This creates:
 
-```
+```text
 resources/data.txt
 ```
 
@@ -61,10 +61,11 @@ with open("resources/data.txt", "r", encoding="utf-8") as f:
     text = f.read()
 
 tokens = tokenizer.encode(text)
+
 print("Total tokens:", len(tokens))
 ```
 
-### 5. Train Model
+### 5. Train the Model
 
 ```bash
 python -m training.train
@@ -80,26 +81,29 @@ python -m inference.generate
 
 ## Outputs
 
-Experiment outputs are saved in:
+Experiment outputs are stored in:
 
-```
-experiments/exp_01_baseline/
+```text
+experiments/experiment_01/
 ```
 
 Including:
-- Train logs
+- Training logs
 - Validation logs
-- Checkpoints
-- Generated samples
+- Model checkpoints
+- Generated text samples
+- Training plots
 
 ---
 
 ## Experiment Summary
 
-| Component  | Value                    |
-| ---------- | ------------------------ |
-| Dataset    | WikiText-103 subset      |
-| Tokenizer  | GPT-2 TikToken           |
-| Objective  | Baseline GPT training    |
-| Model Type | Decoder-only Transformer |
-| Hardware   | Google Colab T4          |
+| Component   | Value                         |
+|--------------|------------------------------|
+| Dataset      | WikiText-103 subset          |
+| Tokenizer    | GPT-2 TikToken               |
+| Objective    | Baseline GPT training        |
+| Model Type   | Decoder-only Transformer     |
+| Hardware     | Google Colab T4 GPU          |
+
+```
