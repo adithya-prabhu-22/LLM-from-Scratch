@@ -1,8 +1,3 @@
-Use **no `id="..."` inside code fences**. GitHub renders those badly sometimes.
-
-Start Exp02A README like this:
-
-````markdown
 # Experiment 02A — Medical GPT Training using GPT-2 TikToken
 
 ## Overview
@@ -30,7 +25,7 @@ git clone https://github.com/adithya-prabhu-22/LLM-from-Scratch.git
 cd LLM-from-Scratch
 ```
 
-### 2. Install Dependencies
+### 2. Install Requirements
 
 ```bash
 pip install -r requirements.txt
@@ -42,13 +37,13 @@ pip install -r requirements.txt
 python scripts/prepare_medical_5m.py
 ```
 
-This generates:
+This creates:
 
 ```text
 resources/data.txt
 ```
 
-### 4. Verify Dataset Token Count
+### 4. Verify Token Count
 
 ```python
 import tiktoken
@@ -59,7 +54,7 @@ with open("resources/data.txt", "r", encoding="utf-8") as f:
 tokenizer = tiktoken.get_encoding("gpt2")
 tokens = tokenizer.encode(text)
 
-print(f"Total Tokens: {len(tokens):,}")
+print("Total tokens:", len(tokens))
 ```
 
 Expected output:
@@ -68,13 +63,13 @@ Expected output:
 ~5,000,000 tokens
 ```
 
-### 5. Start Training
+### 5. Train the Model
 
 ```bash
 python -m training.train
 ```
 
-### 6. Generate Text Samples
+### 6. Generate Text
 
 ```bash
 python -m inference.generate
@@ -82,25 +77,22 @@ python -m inference.generate
 
 ---
 
-## Experiment Outputs
+## Outputs
 
-All experiment artifacts are stored in:
+Experiment outputs are stored in:
 
 ```text
 experiments/experiment_02A/
 ```
 
-Generated outputs include:
+Including:
 
-```text
-plots/
-README.md
-Experiment_02A_report.pdf
-checkpoints/
-train_log.csv
-val_log.csv
-tokenizer_report.json
-```
+- Training logs
+- Validation logs
+- Model checkpoints
+- Generated text samples
+- Training plots
+- Experiment report PDF
 
 ---
 
@@ -109,19 +101,17 @@ tokenizer_report.json
 | Component | Value |
 |---|---|
 | Experiment | Experiment 02A |
-| Dataset Domain | Biomedical / Medical |
+| Dataset | Biomedical Corpus |
 | Dataset Size | ~5M Tokens |
 | Tokenizer | GPT-2 TikToken |
+| Objective | Medical GPT Training |
 | Model Type | Decoder-only Transformer |
-| Training Objective | Medical Language Modeling |
-| Training Hardware | NVIDIA T4 GPU |
+| Hardware | NVIDIA T4 GPU |
 | Scheduler | Warmup + Cosine Decay |
 | Metrics | Validation Loss, Perplexity |
-| Baseline Purpose | Comparison against Custom BPE Tokenizer |
 
 ---
 
 ## Key Outcome
 
-Experiment 02A establishes the baseline medical-domain language modeling performance using the GPT-2 TikToken tokenizer. The results from this experiment are directly compared against Experiment 02B to evaluate the effectiveness of the custom biomedical BPE tokenizer.
-````
+Experiment 02A establishes the baseline medical-domain language modeling performance using the GPT-2 TikToken tokenizer. The resulting validation loss and perplexity metrics are later compared against Experiment 02B to evaluate the effectiveness of the custom biomedical BPE tokenizer.
