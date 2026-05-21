@@ -11,6 +11,12 @@ PROJECT_DIRS = [
     "utils",
     "tests",
     "experiments",
+    "experiments/experiment_01",
+    "experiments/experiment_01/plots",
+    "experiments/experiment_02A",
+    "experiments/experiment_02A/plots",
+    "experiments/experiment_02B",
+    "experiments/experiment_02B/plots",
     "notebooks",
     "resources",
     "scripts",
@@ -64,12 +70,17 @@ PROJECT_FILES = [
 
     "scripts/train_run.sh",
     "scripts/prepare_data.py",
+    "scripts/prepare_medical_5m.py",
     "scripts/tokenize_chunks_custom_bpe.py",
+
+    "experiments/experiment_01/README.md",
+    "experiments/experiment_02A/README.md",
+    "experiments/experiment_02B/README.md",
 
     "main.py",
     "README.md",
     "requirements.txt",
-    "dev-requirements.txt",
+    "requirements-dev.txt",
     ".gitignore",
     ".env.example",
 ]
