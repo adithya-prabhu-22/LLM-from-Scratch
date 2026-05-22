@@ -17,6 +17,8 @@ PROJECT_DIRS = [
     "experiments/experiment_02A/plots",
     "experiments/experiment_02B",
     "experiments/experiment_02B/plots",
+    "experiments/experiment_03A",
+    "experiments/experiment_03A/plots",
     "notebooks",
     "resources",
     "scripts",
@@ -53,11 +55,13 @@ PROJECT_FILES = [
     "training/loss.py",
     "training/train.py",
     "training/train_experiment_02b.py",
+    "training/train_experiment_03a.py",
     "training/evaluate.py",
     "training/chunk_dataset.py",
 
     "inference/__init__.py",
     "inference/generate.py",
+    "inference/benchmark_kv_cache.py",
 
     "utils/__init__.py",
     "utils/checkpoint.py",
@@ -72,10 +76,13 @@ PROJECT_FILES = [
     "scripts/prepare_data.py",
     "scripts/prepare_medical_5m.py",
     "scripts/tokenize_chunks_custom_bpe.py",
+    "scripts/prepare_exp03a_30m_text_chunks.py",
+    "scripts/tokenize_exp03a_custom_bpe.py",
 
     "experiments/experiment_01/README.md",
     "experiments/experiment_02A/README.md",
     "experiments/experiment_02B/README.md",
+    "experiments/experiment_03A/README.md",
 
     "main.py",
     "README.md",
