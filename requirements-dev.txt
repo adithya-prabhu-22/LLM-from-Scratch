@@ -1,8 +1,8 @@
 -r requirements.txt
 
+tensorboard
 matplotlib
 networkx
 sympy
 jupyter
 pytest
-tensorboard

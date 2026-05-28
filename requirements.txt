@@ -1,6 +1,6 @@
 torch
 numpy
+tqdm
 tiktoken
 regex
 requests
-tqdm
