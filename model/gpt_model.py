@@ -32,6 +32,9 @@ class GPTModel(nn.Module):
                     num_heads=config.num_heads,
                     dropout=config.dropout,
                     bias=config.qkv_bias,
+                    ffn_hidden_dim=config.ffn_hidden_dim,
+                    activation=config.activation,
+                    attention_type=config.attention_type,
                 )
                 for _ in range(config.num_layers)
             ]
@@ -55,11 +58,23 @@ class GPTModel(nn.Module):
         use_cache: bool = False,
     ):
 
-        B, T = input_ids.shape
+        if input_ids.dim() != 2:
+            raise ValueError(
+                f"Expected input_ids shape (batch_size, seq_len), "
+                f"but got {tuple(input_ids.shape)}"
+            )
+
+        _, T = input_ids.shape
 
         if past_kv is None:
             past_length = 0
         else:
+            if len(past_kv) != self.num_layers:
+                raise ValueError(
+                    f"Expected past_kv for {self.num_layers} layers, "
+                    f"but got {len(past_kv)}"
+                )
+
             past_length = past_kv[0][0].shape[2]
 
         total_length = past_length + T
@@ -74,7 +89,7 @@ class GPTModel(nn.Module):
             start_pos=past_length,
         )
 
-        present_kv = []
+        present_kv = [] if use_cache else None
 
         for idx, block in enumerate(self.blocks):
 
@@ -103,3 +118,11 @@ class GPTModel(nn.Module):
             return logits, present_kv
 
         return logits
+
+    def num_parameters(self, trainable_only: bool = False) -> int:
+        parameters = self.parameters()
+
+        if trainable_only:
+            parameters = (p for p in parameters if p.requires_grad)
+
+        return sum(p.numel() for p in parameters)

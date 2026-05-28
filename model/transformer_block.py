@@ -14,6 +14,9 @@ class TransformerBlock(nn.Module):
         num_heads: int,
         dropout: float = 0.0,
         bias: bool = False,
+        ffn_hidden_dim: int | None = None,
+        activation: str = "gelu",
+        attention_type: str = "standard",
     ):
         super().__init__()
 
@@ -27,6 +30,7 @@ class TransformerBlock(nn.Module):
             num_heads=num_heads,
             bias=bias,
             dropout=dropout,
+            attention_type=attention_type,
         )
 
         self.ln_2 = LayerNorm(
@@ -36,6 +40,8 @@ class TransformerBlock(nn.Module):
 
         self.ffn = FeedForward(
             d_model=d_model,
+            hidden_dim=ffn_hidden_dim,
+            activation=activation,
             dropout=dropout,
             bias=bias,
         )
