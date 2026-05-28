@@ -1,3 +1,4 @@
+import argparse
 import csv
 import json
 import math
@@ -52,6 +53,35 @@ def save_config(config, experiment_dir):
 
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config.__dict__, f, indent=4)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Train Experiment 02B: Custom BPE tokenizer with standard attention."
+    )
+
+    parser.add_argument(
+        "--tokenized_dir",
+        type=str,
+        default="/content/drive/MyDrive/exp_02b_custom_bpe/tokenized_chunks",
+        help="Path to custom BPE tokenized chunk directory.",
+    )
+
+    parser.add_argument(
+        "--num_epochs",
+        type=int,
+        default=None,
+        help="Override number of training epochs.",
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=None,
+        help="Override batch size.",
+    )
+
+    return parser.parse_args()
 
 
 def train(
@@ -267,6 +297,8 @@ def train(
 
 
 def main():
+    args = parse_args()
+
     config = GPTConfig(
         vocab_size=52000,
         context_length=256,
@@ -276,6 +308,8 @@ def main():
         num_layers=6,
         dropout=0.1,
         qkv_bias=False,
+        ffn_hidden_dim=1024,
+        attention_type="standard",
         grad_clip=1.0,
         learning_rate=3e-4,
         min_learning_rate=1e-5,
@@ -284,10 +318,10 @@ def main():
     )
 
     experiment_dir = "experiments/exp_02b_custom_bpe_medical_5m"
-    tokenized_dir = "/content/drive/MyDrive/exp_02b_custom_bpe/tokenized_chunks"
+    tokenized_dir = args.tokenized_dir
 
-    num_epochs = 5
-    batch_size = 8
+    num_epochs = args.num_epochs if args.num_epochs is not None else 5
+    batch_size = args.batch_size if args.batch_size is not None else 8
 
     save_config(config, experiment_dir)
 
@@ -313,7 +347,7 @@ def main():
         batch_size=batch_size,
         shuffle=True,
         num_workers=2,
-        pin_memory=True,
+        pin_memory=device.type == "cuda",
     )
 
     val_dataloader = DataLoader(
@@ -321,7 +355,7 @@ def main():
         batch_size=batch_size,
         shuffle=False,
         num_workers=2,
-        pin_memory=True,
+        pin_memory=device.type == "cuda",
     )
 
     model = GPTModel(config)
@@ -330,7 +364,7 @@ def main():
     optimizer = AdamW(
         model.parameters(),
         lr=config.learning_rate,
-        weight_decay=0.1,
+        weight_decay=config.weight_decay,
     )
 
     total_steps = math.ceil(

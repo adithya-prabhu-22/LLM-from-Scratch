@@ -1,3 +1,4 @@
+import argparse
 import csv
 import json
 import math
@@ -52,6 +53,35 @@ def save_config(config, experiment_dir):
 
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config.__dict__, f, indent=4)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Train Experiment 02C: Custom BPE tokenizer with flash attention."
+    )
+
+    parser.add_argument(
+        "--tokenized_dir",
+        type=str,
+        default="/content/drive/MyDrive/exp_02b_custom_bpe/tokenized_chunks",
+        help="Path to custom BPE tokenized chunk directory.",
+    )
+
+    parser.add_argument(
+        "--num_epochs",
+        type=int,
+        default=None,
+        help="Override number of training epochs.",
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=None,
+        help="Override batch size.",
+    )
+
+    return parser.parse_args()
 
 
 def train(
@@ -267,6 +297,8 @@ def train(
 
 
 def main():
+    args = parse_args()
+
     config = GPTConfig(
         vocab_size=52000,
         context_length=128,
@@ -286,10 +318,10 @@ def main():
     )
 
     experiment_dir = "experiments/exp_02c_custom_bpe_flash_attention_medical_5m"
-    tokenized_dir = "/content/drive/MyDrive/exp_02b_custom_bpe/tokenized_chunks"
+    tokenized_dir = args.tokenized_dir
 
-    num_epochs = 1
-    batch_size = 2
+    num_epochs = args.num_epochs if args.num_epochs is not None else 1
+    batch_size = args.batch_size if args.batch_size is not None else 2
 
     save_config(config, experiment_dir)
 
