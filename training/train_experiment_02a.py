@@ -389,26 +389,26 @@ def main():
 
     config = GPTConfig(
         vocab_size=50257,
-        context_length=128,
-        stride=64,
-        d_model=256,
-        num_heads=4,
-        num_layers=4,
+        context_length=1024,
+        stride=256,
+        d_model=768,
+        num_heads=12,
+        num_layers=12,
         dropout=0.1,
         qkv_bias=False,
-        ffn_hidden_dim=1024,
+        ffn_hidden_dim=3072,
         attention_type="standard",
         grad_clip=1.0,
         learning_rate=3e-4,
         min_learning_rate=1e-5,
         use_amp=True,
-        gradient_accumulation_steps=4,
+        gradient_accumulation_steps=8,
     )
 
     experiment_dir = "experiments/exp_02a_tiktoken_medical_5m"
 
-    num_epochs = args.num_epochs if args.num_epochs is not None else 1
-    batch_size = args.batch_size if args.batch_size is not None else 2
+    num_epochs = args.num_epochs if args.num_epochs is not None else 5
+    batch_size = args.batch_size if args.batch_size is not None else 4
 
     save_config(config, experiment_dir)
 

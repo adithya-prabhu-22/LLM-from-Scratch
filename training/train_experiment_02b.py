@@ -301,14 +301,14 @@ def main():
 
     config = GPTConfig(
         vocab_size=52000,
-        context_length=256,
-        stride=64,
-        d_model=512,
-        num_heads=8,
-        num_layers=6,
+        context_length=1024,
+        stride=256,
+        d_model=768,
+        num_heads=12,
+        num_layers=12,
         dropout=0.1,
         qkv_bias=False,
-        ffn_hidden_dim=1024,
+        ffn_hidden_dim=3072,
         attention_type="standard",
         grad_clip=1.0,
         learning_rate=3e-4,
@@ -321,7 +321,7 @@ def main():
     tokenized_dir = args.tokenized_dir
 
     num_epochs = args.num_epochs if args.num_epochs is not None else 5
-    batch_size = args.batch_size if args.batch_size is not None else 8
+    batch_size = args.batch_size if args.batch_size is not None else 4
 
     save_config(config, experiment_dir)
 
