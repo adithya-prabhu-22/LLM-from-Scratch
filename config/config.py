@@ -15,7 +15,6 @@ class GPTConfig:
     qkv_bias: bool = False
 
     ffn_hidden_dim: int | None = 1024
-    activation: str = "gelu"
 
     attention_type: str = "standard"
 

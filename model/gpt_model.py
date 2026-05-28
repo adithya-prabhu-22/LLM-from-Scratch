@@ -33,7 +33,6 @@ class GPTModel(nn.Module):
                     dropout=config.dropout,
                     bias=config.qkv_bias,
                     ffn_hidden_dim=config.ffn_hidden_dim,
-                    activation=config.activation,
                     attention_type=config.attention_type,
                 )
                 for _ in range(config.num_layers)
