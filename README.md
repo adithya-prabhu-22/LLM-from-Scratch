@@ -1,4 +1,3 @@
-````markdown
 # LLM-from-Scratch
 
 A from-scratch implementation of a GPT-style decoder-only Transformer in PyTorch.
@@ -506,4 +505,3 @@ The work progressed from a small WikiText baseline to a controlled medical-domai
 The strongest modeling improvement came from the custom biomedical BPE tokenizer in Experiment 02B. The strongest KV-cache speedup appeared in Experiment 02C, where Flash/SDPA attention preserved model quality while improving inference efficiency.
 
 Overall, the project shows the importance of tokenizer design, reproducible training infrastructure, checkpointing, and inference benchmarking in building domain-specific GPT-style language models from scratch.
-````
