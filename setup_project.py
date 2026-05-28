@@ -54,6 +54,7 @@ PROJECT_FILES = [
     "training/__init__.py",
     "training/loss.py",
     "training/train.py",
+    "training/train_experiment_02a.py",
     "training/train_experiment_02b.py",
     "training/train_experiment_02c.py",
     "training/evaluate.py",

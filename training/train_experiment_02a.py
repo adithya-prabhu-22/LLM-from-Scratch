@@ -5,15 +5,16 @@ import time
 from pathlib import Path
 
 import torch
+import tiktoken
+
 from torch.optim import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR, LinearLR, SequentialLR
-from torch.utils.data import DataLoader, random_split
 
 from config.config import GPTConfig
 from model.gpt_model import GPTModel
 from training.loss import GPTLoss
 from training.evaluate import evaluate
-from training.chunk_dataset import TokenChunkDataset
+from data.dataloader import create_dataloader
 from utils.checkpoint import save_checkpoint
 from utils.logger import setup_logger
 
@@ -52,6 +53,30 @@ def save_config(config, experiment_dir):
 
     with open(config_path, "w", encoding="utf-8") as f:
         json.dump(config.__dict__, f, indent=4)
+
+
+def save_tokenizer_report(tokens, text, tokenizer_name, experiment_dir):
+    total_chars = len(text)
+    total_words = len(text.split())
+    total_tokens = len(tokens)
+
+    report = {
+        "tokenizer": tokenizer_name,
+        "total_chars": total_chars,
+        "total_words": total_words,
+        "total_tokens": total_tokens,
+        "chars_per_token": total_chars / max(total_tokens, 1),
+        "tokens_per_word": total_tokens / max(total_words, 1),
+        "words_per_token": total_words / max(total_tokens, 1),
+    }
+
+    report_path = Path(experiment_dir) / "tokenizer_report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(report_path, "w", encoding="utf-8") as f:
+        json.dump(report, f, indent=4)
+
+    return report
 
 
 def train(
@@ -268,7 +293,7 @@ def train(
 
 def main():
     config = GPTConfig(
-        vocab_size=52000,
+        vocab_size=50257,
         context_length=128,
         stride=64,
         d_model=256,
@@ -277,7 +302,7 @@ def main():
         dropout=0.1,
         qkv_bias=False,
         ffn_hidden_dim=1024,
-        attention_type="flash",
+        attention_type="standard",
         grad_clip=1.0,
         learning_rate=3e-4,
         min_learning_rate=1e-5,
@@ -285,8 +310,9 @@ def main():
         gradient_accumulation_steps=4,
     )
 
-    experiment_dir = "experiments/exp_02c_custom_bpe_flash_attention_medical_5m"
-    tokenized_dir = "/content/drive/MyDrive/exp_02b_custom_bpe/tokenized_chunks"
+    experiment_dir = "experiments/exp_02a_tiktoken_medical_5m"
+
+    data_path = "resources/data.txt"
 
     num_epochs = 1
     batch_size = 2
@@ -295,35 +321,37 @@ def main():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    dataset = TokenChunkDataset(
-        tokenized_dir=tokenized_dir,
+    with open(data_path, "r", encoding="utf-8") as f:
+        text = f.read()
+
+    tokenizer = tiktoken.get_encoding("gpt2")
+    tokens = tokenizer.encode(text)
+
+    save_tokenizer_report(
+        tokens=tokens,
+        text=text,
+        tokenizer_name="gpt2",
+        experiment_dir=experiment_dir,
+    )
+
+    split_idx = int(0.9 * len(tokens))
+    train_tokens = tokens[:split_idx]
+    val_tokens = tokens[split_idx:]
+
+    train_dataloader = create_dataloader(
+        tokens=train_tokens,
         context_length=config.context_length,
+        batch_size=batch_size,
+        shuffle=True,
         stride=config.stride,
     )
 
-    train_size = int(0.9 * len(dataset))
-    val_size = len(dataset) - train_size
-
-    train_dataset, val_dataset = random_split(
-        dataset,
-        [train_size, val_size],
-        generator=torch.Generator().manual_seed(42),
-    )
-
-    train_dataloader = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        num_workers=2,
-        pin_memory=device.type == "cuda",
-    )
-
-    val_dataloader = DataLoader(
-        val_dataset,
+    val_dataloader = create_dataloader(
+        tokens=val_tokens,
+        context_length=config.context_length,
         batch_size=batch_size,
         shuffle=False,
-        num_workers=2,
-        pin_memory=device.type == "cuda",
+        stride=config.stride,
     )
 
     model = GPTModel(config)
