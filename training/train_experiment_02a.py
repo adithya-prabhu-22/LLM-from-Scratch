@@ -1,3 +1,4 @@
+import argparse
 import csv
 import json
 import math
@@ -34,6 +35,42 @@ class CSVLogger:
         with open(self.path, "a", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=self.fieldnames)
             writer.writerow(row)
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Train Experiment 02A: tiktoken GPT-2 tokenizer with standard attention."
+    )
+
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        default=None,
+        help="Path to one raw text file for tiktoken training.",
+    )
+
+    parser.add_argument(
+        "--data_dir",
+        type=str,
+        default=None,
+        help="Path to directory containing raw text chunk files.",
+    )
+
+    parser.add_argument(
+        "--num_epochs",
+        type=int,
+        default=None,
+        help="Override number of training epochs.",
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=None,
+        help="Override batch size.",
+    )
+
+    return parser.parse_args()
 
 
 def get_gpu_memory_stats(device):
@@ -77,6 +114,62 @@ def save_tokenizer_report(tokens, text, tokenizer_name, experiment_dir):
         json.dump(report, f, indent=4)
 
     return report
+
+
+def load_text_from_file(data_path: str) -> str:
+    path = Path(data_path)
+
+    if not path.exists():
+        raise FileNotFoundError(f"Data file not found: {path}")
+
+    if not path.is_file():
+        raise ValueError(f"Expected a file path, got: {path}")
+
+    return path.read_text(encoding="utf-8")
+
+
+def load_text_from_directory(data_dir: str) -> str:
+    directory = Path(data_dir)
+
+    if not directory.exists():
+        raise FileNotFoundError(f"Data directory not found: {directory}")
+
+    if not directory.is_dir():
+        raise ValueError(f"Expected a directory path, got: {directory}")
+
+    text_files = sorted(
+        list(directory.glob("*.txt"))
+        + list(directory.glob("*.text"))
+        + list(directory.glob("*.md"))
+    )
+
+    if not text_files:
+        raise FileNotFoundError(
+            f"No text files found in directory: {directory}"
+        )
+
+    chunks = []
+
+    for file_path in text_files:
+        chunks.append(file_path.read_text(encoding="utf-8"))
+
+    return "\n".join(chunks)
+
+
+def load_training_text(data_path=None, data_dir=None) -> str:
+    if data_path is not None and data_dir is not None:
+        raise ValueError(
+            "Use either --data_path or --data_dir, not both."
+        )
+
+    if data_path is not None:
+        return load_text_from_file(data_path)
+
+    if data_dir is not None:
+        return load_text_from_directory(data_dir)
+
+    default_path = "resources/data.txt"
+    return load_text_from_file(default_path)
 
 
 def train(
@@ -292,6 +385,8 @@ def train(
 
 
 def main():
+    args = parse_args()
+
     config = GPTConfig(
         vocab_size=50257,
         context_length=128,
@@ -312,17 +407,17 @@ def main():
 
     experiment_dir = "experiments/exp_02a_tiktoken_medical_5m"
 
-    data_path = "resources/data.txt"
-
-    num_epochs = 1
-    batch_size = 2
+    num_epochs = args.num_epochs if args.num_epochs is not None else 1
+    batch_size = args.batch_size if args.batch_size is not None else 2
 
     save_config(config, experiment_dir)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    with open(data_path, "r", encoding="utf-8") as f:
-        text = f.read()
+    text = load_training_text(
+        data_path=args.data_path,
+        data_dir=args.data_dir,
+    )
 
     tokenizer = tiktoken.get_encoding("gpt2")
     tokens = tokenizer.encode(text)
