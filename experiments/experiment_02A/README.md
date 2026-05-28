@@ -1,6 +1,3 @@
-Use this updated README. It removes **Experiment 02C** from the 02A README and keeps **Experiment 02B only as light future work**.
-
-````markdown
 # Experiment 02A — Medical GPT Training Baseline using GPT-2/tiktoken
 
 ## Overview
@@ -288,4 +285,3 @@ The experiment achieved stable validation behavior across five epochs, with vali
 The KV-cache benchmark confirmed that cached autoregressive decoding improves inference efficiency, especially at longer prompt lengths. The best observed KV-cache speedup was `1.5389x` at prompt length `512`.
 
 Overall, Experiment 02A provides the main GPT-2/tiktoken medical-domain baseline for the next tokenizer-focused experiment.
-````
